@@ -7,6 +7,7 @@ RUN groupadd -r mysql && useradd -r -g mysql mysql
 
 # add gosu for easy step-down from root
 ENV GOSU_VERSION 1.7
+
 RUN set -x \
 	&& apt-get update && apt-get install -y --no-install-recommends ca-certificates wget && rm -rf /var/lib/apt/lists/* \
 	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
@@ -46,6 +47,7 @@ RUN set -ex; \
 	apt-key list > /dev/null
 
 ENV MYSQL_MAJOR 5.7
+
 ENV MYSQL_VERSION 5.7.20-1debian8
 
 RUN echo "deb http://repo.mysql.com/apt/debian/ jessie mysql-${MYSQL_MAJOR}" > /etc/apt/sources.list.d/mysql.list
@@ -61,16 +63,17 @@ RUN { \
 	&& apt-get update && apt-get install -y mysql-server="${MYSQL_VERSION}" && rm -rf /var/lib/apt/lists/* \
 	&& rm -rf /var/lib/mysql && mkdir -p /var/lib/mysql /var/run/mysqld \
 	&& chown -R mysql:mysql /var/lib/mysql /var/run/mysqld \
-# ensure that /var/run/mysqld (used for socket and lock files) is writable regardless of the UID our mysqld instance ends up having at runtime
+	# ensure that /var/run/mysqld (used for socket and lock files) is writable regardless of the UID our mysqld instance ends up having at runtime
 	&& chmod 777 /var/run/mysqld \
-# comment out a few problematic configuration values
+	# comment out a few problematic configuration values
 	&& find /etc/mysql/ -name '*.cnf' -print0 \
 		| xargs -0 grep -lZE '^(bind-address|log)' \
-		| xargs -rt -0 sed -Ei 's/^(bind-address|log)/#&/' \
-# don't reverse lookup hostnames, they are usually another container
-	&& echo '[mysqld]\nskip-host-cache\nskip-name-resolve' > /etc/mysql/conf.d/docker.cnf
+		| xargs -rt -0 sed -Ei 's/^(bind-address|log)/#&/'
 
-RUN sed -i "s/.*bind-address.*/bind-address = 0.0.0.0/" /etc/mysql/mysql.conf.d/mysqld.cnf
+# default docker conf
+COPY docker.cnf /etc/mysql/conf.d/docker.cnf
+
+#RUN sed -i "s/.*bind-address.*/bind-address = 0.0.0.0/" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 VOLUME /var/lib/mysql
 
@@ -79,4 +82,5 @@ RUN ln -s usr/local/bin/docker-entrypoint.sh /entrypoint.sh # backwards compat
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 EXPOSE 3306
+
 CMD ["mysqld"]
