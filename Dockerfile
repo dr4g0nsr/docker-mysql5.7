@@ -73,9 +73,10 @@ RUN { \
 # default docker conf
 COPY docker.cnf /etc/mysql/conf.d/docker.cnf
 
-#RUN sed -i "s/.*bind-address.*/bind-address = 0.0.0.0/" /etc/mysql/mysql.conf.d/mysqld.cnf
+RUN sed -i "s/.*bind-address.*/bind-address = 0.0.0.0/" /etc/mysql/mysql.conf.d/mysqld.cnf
 
 VOLUME /var/lib/mysql
+VOLUME /etc/mysql/mysql.conf.d
 
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN ln -s usr/local/bin/docker-entrypoint.sh /entrypoint.sh # backwards compat
